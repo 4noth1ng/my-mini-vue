@@ -3,7 +3,7 @@
 
 class ReactiveEffect {
   private _fn: any;
-  constructor(fn) {
+  constructor(fn, public scheduler?) {
     this._fn = fn;
   }
   run() {
@@ -44,7 +44,13 @@ export function trigger(target, key) {
   let depsMap = targetMap.get(target);
   let dep = depsMap.get(key);
   for (const effect of dep) {
-    effect.run();
+    // 如果传入`scheduler`，则执行`scheduler`
+    if (effect.scheduler) {
+      effect.scheduler();
+    } else {
+      // 没传执行`fn`
+      effect.run();
+    }
   }
 }
 
@@ -52,8 +58,8 @@ let activeEffect; // 指向当前执行的activeEffect对象
 
 // 调用`effect`函数时，执行传入的`fn`
 // 创建`ReactiveEffect`对象，传入`fn`
-export function effect(fn) {
-  const _effect = new ReactiveEffect(fn);
+export function effect(fn, options: any = {}) {
+  const _effect = new ReactiveEffect(fn, options.scheduler);
   // 执行`fn`
   _effect.run();
   return _effect.run.bind(_effect);
