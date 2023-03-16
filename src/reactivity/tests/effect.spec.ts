@@ -73,7 +73,8 @@ describe("effect", () => {
     obj.prop = 2;
     expect(dummy).toBe(2);
     stop(runner);
-    obj.prop = 3;
+    // obj.prop = 3; // 只会触发`set`
+    obj.prop++; // obj.prop = obj.prop + 1 触发`get`和`set` 导致调用stop(runner)后删除的依赖重新被收集
     expect(dummy).toBe(2);
     runner();
     expect(dummy).toBe(3);
