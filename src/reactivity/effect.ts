@@ -5,7 +5,7 @@ import { extend } from "../shared/index";
 let activeEffect; // 指向当前执行的ReactiveEffect对象
 let shouldTrack;
 
-class ReactiveEffect {
+export class ReactiveEffect {
   private _fn: any;
   deps = [];
   active = true; // 判断是否重复调用 stop(runner)，`active` = false代表调用了`stop`
