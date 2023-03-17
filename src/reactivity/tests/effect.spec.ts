@@ -5,6 +5,9 @@ describe("effect", () => {
   it("happy path", () => {
     const user = reactive({
       age: 10,
+      foo: {
+        bar: 1,
+      },
     });
     // user是一个响应式对象, 其内部存在一个容器，通过`effect`函数收集依赖
     // `effect`内部接收一个函数参数`fn`，一开始会执行`fn`，触发响应式对象的get
@@ -13,6 +16,7 @@ describe("effect", () => {
     effect(() => {
       nextAge = user.age + 1;
     });
+
     // 当我们修改响应式对象的值时，触发其`set`操作
     // 响应式对象则会将依赖取出，即执行上述的`fn`，这称为触发依赖
     expect(nextAge).toBe(11);
@@ -74,7 +78,7 @@ describe("effect", () => {
     expect(dummy).toBe(2);
     stop(runner);
     // obj.prop = 3; // 只会触发`set`
-    obj.prop++; // obj.prop = obj.prop + 1 触发`get`和`set` 导致调用stop(runner)后删除的依赖重新被收集
+    obj.prop++; // obj.prop = obj.prop + 1 触发`get`和`set`导致调用stop(runner)后删除的依赖重新被收集
     expect(dummy).toBe(2);
     runner();
     expect(dummy).toBe(3);
