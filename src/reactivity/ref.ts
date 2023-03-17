@@ -54,3 +54,30 @@ function trackRefValue(ref) {
 export function ref(value) {
   return new RefImpl(value);
 }
+
+export function isRef(ref) {
+  return ref instanceof RefImpl;
+}
+
+export function unRef(ref) {
+  return isRef(ref) ? ref._value : ref;
+}
+
+export function proxyRefs(objectWithRefs) {
+  // 创建proxy
+  return new Proxy(objectWithRefs, {
+    get(target, key) {
+      // 如果是ref 返回value 否则返回其值即可
+      return unRef(Reflect.get(target, key));
+    },
+
+    set(target, key, value) {
+      // 当原有的值是`ref`且新的值不是`ref`，则对原有`ref`的.value进行赋值
+      if (isRef(target[key]) && !isRef(value)) {
+        return (target[key].value = value);
+      } else {
+        return Reflect.set(target, key, value);
+      }
+    },
+  });
+}
