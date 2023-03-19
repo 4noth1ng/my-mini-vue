@@ -2,6 +2,7 @@ export function createComponentInstance(vnode) {
   const component = {
     vnode,
     type: vnode.type,
+    setupState: {},
   };
   return vnode;
 }
@@ -19,7 +20,19 @@ function setupStatefulComponent(instance) {
   // 调用`setup`, 获取到`setup`的返回值
   // 如何获取`setup`? instance -> vnode -> type(rootComponent) -> setup
   const Component = instance.type;
-
+  // ctx 在instance即组件实例上绑定proxy，然后在调用render时，将render上的this绑定到proxy上
+  instance.proxy = new Proxy(
+    {},
+    {
+      get(target, key) {
+        // setupState, 也就是`setup`函数返回值
+        const { setupState } = instance;
+        if (key in setupState) {
+          return setupState[key];
+        }
+      },
+    }
+  );
   const { setup } = Component;
 
   if (setup) {

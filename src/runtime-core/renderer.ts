@@ -63,7 +63,10 @@ function setupRenderEffect(instance, container) {
   // 虚拟节点树
   // 将 component类型的vnode初始化为组件实例instance后，调用`render`，进行拆箱，得到该组件对应的虚拟节点
   // 比如根组件得到的就为根虚拟节点
-  const subTree = instance.render();
+
+  const { proxy } = instance;
+  // 将render的this绑定到proxy上，render内获取this上属性时会被proxy拦截
+  const subTree = instance.render.call(proxy);
 
   // vnode -> patch
   // element类型 vnode -> element -> mountElement
