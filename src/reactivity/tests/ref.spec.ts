@@ -21,6 +21,7 @@ describe("ref", () => {
     a.value = 2;
     expect(calls).toBe(2);
     expect(dummy).toBe(2);
+    // 值未改变 则无需再次触发依赖
     a.value = 2;
     expect(calls).toBe(2);
     expect(dummy).toBe(2);
