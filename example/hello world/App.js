@@ -5,7 +5,14 @@ export const App = {
   // 通过直接调用`render`函数
   render() {
     // 视图
-    return h("div", "hi, " + this.msg);
+    return h(
+      "div",
+      {
+        id: "root",
+        class: ["red", "hard"],
+      },
+      [h("p", { class: "blue" }, "sb"), h("p", { class: "green" }, "czc")]
+    );
   },
 
   setup() {

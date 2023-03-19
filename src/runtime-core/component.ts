@@ -24,7 +24,7 @@ function setupStatefulComponent(instance) {
 
   if (setup) {
     // return function or Object
-    // function -> 即为render函数 Object -> 注入函数上下文
+    // function -> 即为render函数 Object -> 注入函数上下文({msg: 'hi mini-vue'})
     const setupResult = setup();
 
     handleSetupResult(instance, setupResult);
