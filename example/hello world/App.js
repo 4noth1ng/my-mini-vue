@@ -1,4 +1,5 @@
 import { h } from "../../lib/my-mini-vue.esm.js";
+import { Foo } from "./Foo.js";
 
 window.self = null;
 export const App = {
@@ -25,7 +26,13 @@ export const App = {
        * 然而我们还需要获取诸如`this.$data`， `this.$el`等对象，所以没有采用简单的进行绑定
        * 这里采取的是proxy代理的模式
        */
-      "hello, " + this.msg
+      // "hello, " + this.msg
+      [
+        h("div", {}, "hi, " + this.msg),
+        h(Foo, {
+          count: 1,
+        }),
+      ]
     );
   },
 

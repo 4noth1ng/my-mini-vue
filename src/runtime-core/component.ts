@@ -1,16 +1,19 @@
+import { shallowReadonly } from "../reactivity/reactive";
+import { initProps } from "./componentProps";
 import { PublicInstanceProxyHandlers } from "./componentPublicInstance";
 export function createComponentInstance(vnode) {
   const component = {
     vnode,
     type: vnode.type,
     setupState: {},
+    props: {},
   };
   return component;
 }
 
 export function setupComponent(instance) {
   // TODO
-  // initProps()
+  initProps(instance, instance.vnode.props);
   // initSlots()
 
   // 处理有状态的组件( 区别于无状态的函数组件 )
@@ -28,8 +31,7 @@ function setupStatefulComponent(instance) {
   if (setup) {
     // return function or Object
     // function -> 即为render函数 Object -> 注入函数上下文({msg: 'hi mini-vue'})
-    const setupResult = setup();
-
+    const setupResult = setup(shallowReadonly(instance.props));
     handleSetupResult(instance, setupResult);
   }
 }
