@@ -12,6 +12,12 @@ export const App = {
       {
         id: "root",
         class: ["red", "hard"],
+        onClick() {
+          console.log("click");
+        },
+        onMouseover() {
+          console.log("mouse over");
+        },
       },
       // [h("p", { class: "blue" }, "sb"), h("p", { class: "green" }, "czc")]
       /**

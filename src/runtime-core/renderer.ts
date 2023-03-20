@@ -1,3 +1,4 @@
+import { extend } from "./../shared/index";
 import { ShapeFlags } from "../shared/ShapeFlags";
 import { createComponentInstance, setupComponent } from "./component";
 
@@ -32,10 +33,18 @@ function mountElement(vnode, container) {
   } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
     mountChildren(vnode, el);
   }
-
+  // 判断是否是注册事件
+  const isOn = (key: string) => /^on[A-Z]/.test(key);
   for (const key in props) {
     const val = props[key];
-    el.setAttribute(key, val);
+    // on + Event name
+
+    if (isOn(key)) {
+      const event = key.slice(2).toLowerCase();
+      el.addEventListener(event, val);
+    } else {
+      el.setAttribute(key, val);
+    }
   }
   container.append(el);
 }
