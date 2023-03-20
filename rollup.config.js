@@ -1,5 +1,5 @@
 import typescript from "@rollup/plugin-typescript";
-import pkg from "./package.json" assert { type: "json" };
+import pkg from "./pkg.js";
 export default {
   input: "./src/index.ts",
   output: [
