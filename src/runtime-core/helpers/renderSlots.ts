@@ -1,5 +1,10 @@
 import { createVNode } from "../vnode";
-export function renderSlots(slots, name) {
+export function renderSlots(slots, name, props) {
   const slot = slots[name];
-  return createVNode("div", {}, slot);
+  if (slot) {
+    if (typeof slot === "function") {
+      // 形如：header: (age) => h("div", {}, "header" + age)
+      return createVNode("div", {}, slot(props));
+    }
+  }
 }

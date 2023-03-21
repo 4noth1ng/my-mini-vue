@@ -15,6 +15,14 @@ export function createVNode(type, props?, children?) {
   } else if (Array.isArray(children)) {
     vnode.shapeFlag |= ShapeFlags.ARRAY_CHILDREN;
   }
+
+  // 如何确定需要initSlots，即如何判断传入的是slots?
+  // 需满足组件类型vnode + children为object类型
+  if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+    if (typeof children === "object") {
+      vnode.shapeFlag |= ShapeFlags.SLOT_CHILDREN;
+    }
+  }
   return vnode;
 }
 
