@@ -10,3 +10,19 @@ export const hasChanged = (newVal, oldVal) => {
 
 export const hasOwn = (val, key) =>
   Object.prototype.hasOwnProperty.call(val, key);
+
+// 传入add 生成onAdd add-foo -> onAddFoo
+
+export const camelize = (str: string) => {
+  return str.replace(/-(\w)/g, (_, c: string) => {
+    return c ? c.toUpperCase() : "";
+  });
+};
+
+export const capitalize = (str: string) => {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+};
+
+export const toHandlerKey = (str: string) => {
+  return str ? "on" + capitalize(str) : "";
+};

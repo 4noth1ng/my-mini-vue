@@ -1,4 +1,5 @@
 import { shallowReadonly } from "../reactivity/reactive";
+import { emit } from "./componentEmit";
 import { initProps } from "./componentProps";
 import { PublicInstanceProxyHandlers } from "./componentPublicInstance";
 export function createComponentInstance(vnode) {
@@ -7,7 +8,9 @@ export function createComponentInstance(vnode) {
     type: vnode.type,
     setupState: {},
     props: {},
+    emit: (e: any) => {},
   };
+  component.emit = emit.bind(null, component);
   return component;
 }
 
@@ -31,7 +34,9 @@ function setupStatefulComponent(instance) {
   if (setup) {
     // return function or Object
     // function -> 即为render函数 Object -> 注入函数上下文({msg: 'hi mini-vue'})
-    const setupResult = setup(shallowReadonly(instance.props));
+    const setupResult = setup(shallowReadonly(instance.props), {
+      emit: instance.emit,
+    });
     handleSetupResult(instance, setupResult);
   }
 }
