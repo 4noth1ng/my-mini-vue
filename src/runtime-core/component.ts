@@ -34,11 +34,13 @@ function setupStatefulComponent(instance) {
   const { setup } = Component;
 
   if (setup) {
+    setCurrentInstance(instance);
     // return function or Object
     // function -> 即为render函数 Object -> 注入函数上下文({msg: 'hi mini-vue'})
     const setupResult = setup(shallowReadonly(instance.props), {
       emit: instance.emit,
     });
+    setCurrentInstance(null);
     handleSetupResult(instance, setupResult);
   }
 }
@@ -62,4 +64,12 @@ function finishComponentSetup(instance) {
     // 如果组件对象有render，就把他赋值给实例对象
     instance.render = Component.render;
   }
+}
+
+let currentInstance = null;
+export function getCurrentInstance() {
+  return currentInstance;
+}
+export function setCurrentInstance(instance) {
+  currentInstance = instance;
 }
