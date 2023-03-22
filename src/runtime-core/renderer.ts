@@ -3,13 +3,13 @@ import { ShapeFlags } from "../shared/ShapeFlags";
 import { createComponentInstance, setupComponent } from "./component";
 import { Fragment, Text } from "./vnode";
 
-export function render(vnode, container) {
+export function render(vnode, container, parentComponent) {
   // 调用`patch`方法，处理vnode, 方便后续递归处理
 
-  patch(vnode, container);
+  patch(vnode, container, parentComponent);
 }
 
-function patch(vnode, container) {
+function patch(vnode, container, parentComponent) {
   // 处理组件
   // 针对vnode 是 component | element类型进行处理
   const { type, shapeFlag } = vnode;
@@ -17,23 +17,23 @@ function patch(vnode, container) {
   // Fragment -> 只渲染 children
   switch (type) {
     case Fragment:
-      processFragment(vnode, container);
+      processFragment(vnode, container, parentComponent);
       break;
     case Text:
       processText(vnode, container);
       break;
     default:
       if (shapeFlag & ShapeFlags.ELEMENT) {
-        processElement(vnode, container);
+        processElement(vnode, container, parentComponent);
       } else if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-        processComponent(vnode, container);
+        processComponent(vnode, container, parentComponent);
       }
       break;
   }
 }
 
-function processFragment(vnode, container) {
-  mountChildren(vnode, container);
+function processFragment(vnode, container, parentComponent) {
+  mountChildren(vnode, container, parentComponent);
 }
 
 function processText(vnode, container) {
@@ -42,11 +42,11 @@ function processText(vnode, container) {
   container.append(textNode);
 }
 
-function processElement(vnode, container) {
-  mountElement(vnode, container);
+function processElement(vnode, container, parentComponent) {
+  mountElement(vnode, container, parentComponent);
 }
 
-function mountElement(vnode, container) {
+function mountElement(vnode, container, parentComponent) {
   const el = (vnode.el = document.createElement(vnode.type));
   // 判断 vnode.children 类型，如果是string, 直接赋值即可, 如果是数组，则为vnode类型，就继续调用patch处理, 且挂载的容器即为上面的el
   const { children, props, shapeFlag } = vnode;
@@ -54,7 +54,7 @@ function mountElement(vnode, container) {
   if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
     el.textContent = children;
   } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-    mountChildren(vnode, el);
+    mountChildren(vnode, el, parentComponent);
   }
   // 判断是否是注册事件
   const isOn = (key: string) => /^on[A-Z]/.test(key);
@@ -72,20 +72,20 @@ function mountElement(vnode, container) {
   container.append(el);
 }
 
-function mountChildren(vnode, container) {
+function mountChildren(vnode, container, parentComponent) {
   vnode.children.forEach((v) => {
-    patch(v, container);
+    patch(v, container, parentComponent);
   });
 }
 
-function processComponent(initialVNode, container) {
+function processComponent(initialVNode, container, parentComponent) {
   // 挂载组件
-  mountComponent(initialVNode, container);
+  mountComponent(initialVNode, container, parentComponent);
 }
 
-function mountComponent(initialVNode, container) {
+function mountComponent(initialVNode, container, parentComponent) {
   // 创建组件实例, 用于挂载`props`，`slots`等
-  const instance = createComponentInstance(initialVNode);
+  const instance = createComponentInstance(initialVNode, parentComponent);
 
   // 处理组件, 挂载属性
   setupComponent(instance);
@@ -106,7 +106,7 @@ function setupRenderEffect(instance, initialVNode, container) {
   // element类型 vnode -> element -> mountElement
 
   // 得到虚拟节点树，再次调用patch, 将vnode分为element类型(vnode.type为类似'div'的string)和component类型(vnode.type需初始化为instance)进行处理拆箱, 并挂载
-  patch(subTree, container);
+  patch(subTree, container, instance);
   // element 全部挂载后， 获取的el一定是赋值后的
   // 注意：`$el`获取的是组件实例的根dom节点，我们获取的subTree是调用render后生成的dom树，获取的自然是root， 然后我们将这个dom树挂载到 app上
   initialVNode.el = subTree.el;
