@@ -3,6 +3,7 @@ import { ShapeFlags } from "../shared/ShapeFlags";
 import { createComponentInstance, setupComponent } from "./component";
 import { Fragment, Text } from "./vnode";
 import { createAppAPI } from "./createApp";
+import { effect } from "../reactivity/effect";
 
 export function createRenderer(options) {
   const { createElement, patchProp, insert } = options;
@@ -94,21 +95,26 @@ export function createRenderer(options) {
   }
 
   function setupRenderEffect(instance, initialVNode, container) {
-    // 虚拟节点树
-    // 将 component类型的vnode初始化为组件实例instance后，调用`render`，进行拆箱，得到该组件对应的虚拟节点
-    // 比如根组件得到的就为根虚拟节点
+    /**
+     * 我们需要在虚拟节点更新时触发`render`，如何实现？将render作为依赖传入effect进行收集
+     */
+    effect(() => {
+      // 虚拟节点树
+      // 将 component类型的vnode初始化为组件实例instance后，调用`render`，进行拆箱，得到该组件对应的虚拟节点
+      // 比如根组件得到的就为根虚拟节点
 
-    const { proxy } = instance;
-    // 将render的this绑定到proxy上，render内获取this上属性时会被proxy拦截
-    const subTree = instance.render.call(proxy);
-    // vnode -> patch
-    // element类型 vnode -> element -> mountElement
+      const { proxy } = instance;
+      // 将render的this绑定到proxy上，render内获取this上属性时会被proxy拦截
+      const subTree = instance.render.call(proxy);
+      // vnode -> patch
+      // element类型 vnode -> element -> mountElement
 
-    // 得到虚拟节点树，再次调用patch, 将vnode分为element类型(vnode.type为类似'div'的string)和component类型(vnode.type需初始化为instance)进行处理拆箱, 并挂载
-    patch(subTree, container, instance);
-    // element 全部挂载后， 获取的el一定是赋值后的
-    // 注意：`$el`获取的是组件实例的根dom节点，我们获取的subTree是调用render后生成的dom树，获取的自然是root， 然后我们将这个dom树挂载到 app上
-    initialVNode.el = subTree.el;
+      // 得到虚拟节点树，再次调用patch, 将vnode分为element类型(vnode.type为类似'div'的string)和component类型(vnode.type需初始化为instance)进行处理拆箱, 并挂载
+      patch(subTree, container, instance);
+      // element 全部挂载后， 获取的el一定是赋值后的
+      // 注意：`$el`获取的是组件实例的根dom节点，我们获取的subTree是调用render后生成的dom树，获取的自然是root， 然后我们将这个dom树挂载到 app上
+      initialVNode.el = subTree.el;
+    });
   }
 
   return {

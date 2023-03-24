@@ -3,6 +3,7 @@ import { emit } from "./componentEmit";
 import { initProps } from "./componentProps";
 import { PublicInstanceProxyHandlers } from "./componentPublicInstance";
 import { initSlots } from "./componentSlots";
+import { proxyRefs } from "../reactivity/ref";
 export function createComponentInstance(vnode, parent) {
   const component = {
     vnode,
@@ -52,7 +53,7 @@ function handleSetupResult(instance, setupResult) {
   // TODO function
 
   if (typeof setupResult === "object") {
-    instance.setupState = setupResult;
+    instance.setupState = proxyRefs(setupResult);
   }
 
   // 保证render有值
