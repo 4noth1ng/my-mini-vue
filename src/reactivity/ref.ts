@@ -42,6 +42,8 @@ class RefImpl {
 }
 
 function convert(value) {
+  console.log(isObject(value));
+
   return isObject(value) ? reactive(value) : value;
 }
 
