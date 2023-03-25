@@ -58,8 +58,6 @@ export function createRenderer(options) {
   }
 
   function patchElement(n1, n2, container) {
-    console.log("n1: ", n1);
-    console.log("n2: ", n2);
     const oldProps = n1.props || {};
     const newProps = n2.props || {};
     const el = (n2.el = n1.el);
@@ -67,17 +65,19 @@ export function createRenderer(options) {
   }
 
   function patchProps(el, oldProps, newProps) {
-    for (const key in newProps) {
-      const prevProp = oldProps[key];
-      const nextProp = newProps[key];
+    if (oldProps !== newProps) {
+      for (const key in newProps) {
+        const prevProp = oldProps[key];
+        const nextProp = newProps[key];
 
-      if (prevProp !== nextProp) {
-        patchProp(el, key, prevProp, nextProp);
+        if (prevProp !== nextProp) {
+          patchProp(el, key, prevProp, nextProp);
+        }
       }
-    }
-    for (const key in oldProps) {
-      if (!(key in newProps)) {
-        patchProp(el, key, oldProps[key], null);
+      for (const key in oldProps) {
+        if (!(key in newProps)) {
+          patchProp(el, key, oldProps[key], null);
+        }
       }
     }
   }
