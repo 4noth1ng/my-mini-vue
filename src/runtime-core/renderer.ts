@@ -1,12 +1,18 @@
 import { extend } from "./../shared/index";
-import { ShapeFlags } from "../shared/ShapeFlags";
 import { createComponentInstance, setupComponent } from "./component";
 import { Fragment, Text } from "./vnode";
 import { createAppAPI } from "./createApp";
 import { effect } from "../reactivity/effect";
+import { ShapeFlags } from "../shared/ShapeFlags";
 
 export function createRenderer(options) {
-  const { createElement, patchProp, insert } = options;
+  const {
+    createElement: hostCreateElement,
+    patchProp: hostPatchProp,
+    insert: hostInsert,
+    remove: hostRemove,
+    setElementText: hostSetElementText,
+  } = options;
 
   function render(vnode, container, parentComponent) {
     // 调用`patch`方法，处理vnode, 方便后续递归处理
@@ -38,7 +44,7 @@ export function createRenderer(options) {
   }
 
   function processFragment(n1, vnode, container, parentComponent) {
-    mountChildren(vnode, container, parentComponent);
+    mountChildren(vnode.children, container, parentComponent);
   }
 
   function processText(n1, vnode, container) {
@@ -53,15 +59,53 @@ export function createRenderer(options) {
       mountElement(n2, container, parentComponent);
     } else {
       // diff
-      patchElement(n1, n2, container);
+      patchElement(n1, n2, container, parentComponent);
     }
   }
 
-  function patchElement(n1, n2, container) {
+  function patchElement(n1, n2, container, parentComponent) {
     const oldProps = n1.props || {};
     const newProps = n2.props || {};
     const el = (n2.el = n1.el);
+    console.log(n1, n2);
+    patchChildren(n1, n2, el, parentComponent);
     patchProps(el, oldProps, newProps);
+  }
+
+  function patchChildren(n1, n2, container, parentComponent) {
+    const prevShapeFlag = n1.shapeFlag;
+    const shapeFlag = n2.shapeFlag;
+    const c1 = n1.children;
+    const c2 = n2.children;
+    if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
+      // 新的children 为 TEXT类型
+      if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        // 1. 如果老的children为ARRAY类型，把老的children清空
+        unmountChildren(n1.children);
+      }
+      if (c1 !== c2) {
+        // 2. 设置text
+        hostSetElementText(container, c2);
+      }
+    } else {
+      // 新的children为ARRAY类型
+      if (prevShapeFlag & ShapeFlags.TEXT_CHILDREN) {
+        // 旧的为TEXT
+        hostSetElementText(container, "");
+      } else if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        // 旧的为ARRAY
+        unmountChildren(n1.children);
+      }
+      mountChildren(c2, container, parentComponent);
+    }
+  }
+
+  function unmountChildren(children) {
+    for (const child of children) {
+      const el = child.el;
+      // remove
+      hostRemove(el);
+    }
   }
 
   function patchProps(el, oldProps, newProps) {
@@ -71,40 +115,40 @@ export function createRenderer(options) {
         const nextProp = newProps[key];
 
         if (prevProp !== nextProp) {
-          patchProp(el, key, prevProp, nextProp);
+          hostPatchProp(el, key, prevProp, nextProp);
         }
       }
       for (const key in oldProps) {
         if (!(key in newProps)) {
-          patchProp(el, key, oldProps[key], null);
+          hostPatchProp(el, key, oldProps[key], null);
         }
       }
     }
   }
 
   function mountElement(vnode, container, parentComponent) {
-    const el = (vnode.el = createElement(vnode.type));
+    const el = (vnode.el = hostCreateElement(vnode.type));
     // 判断 vnode.children 类型，如果是string, 直接赋值即可, 如果是数组，则为vnode类型，就继续调用patch处理, 且挂载的容器即为上面的el
     const { children, props, shapeFlag } = vnode;
 
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
       el.textContent = children;
     } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      mountChildren(vnode, el, parentComponent);
+      mountChildren(vnode.children, el, parentComponent);
     }
     // 判断是否是注册事件
     for (const key in props) {
       const val = props[key];
       // on + Event name
 
-      patchProp(el, key, null, val);
+      hostPatchProp(el, key, null, val);
     }
     // container.append(el);
-    insert(el, container);
+    hostInsert(el, container);
   }
 
-  function mountChildren(vnode, container, parentComponent) {
-    vnode.children.forEach((v) => {
+  function mountChildren(children, container, parentComponent) {
+    children.forEach((v) => {
       patch(null, v, container, parentComponent);
     });
   }

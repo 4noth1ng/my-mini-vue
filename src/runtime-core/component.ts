@@ -55,7 +55,7 @@ function handleSetupResult(instance, setupResult) {
   // TODO function
 
   if (typeof setupResult === "object") {
-    instance.setupState = setupResult;
+    instance.setupState = proxyRefs(setupResult);
   }
 
   // 保证render有值

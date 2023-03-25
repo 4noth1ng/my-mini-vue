@@ -4,38 +4,71 @@ export const App = {
   name: "App",
   setup() {
     const count = ref(0);
-
     const onClick = () => {
       count.value++;
     };
-
-    let props = reactive({
+    const props = ref({
       foo: "foo",
       bar: "bar",
     });
-
     const onChangePropsDemo1 = () => {
-      props.foo = "new-foo";
+      props.value.foo = "new-foo";
     };
-
     const onChangePropsDemo2 = () => {
-      props.foo = undefined;
+      props.value.foo = undefined;
     };
-
+    const onChangePropsDemo3 = () => {
+      props.value = {
+        foo: "foo",
+      };
+    };
     return {
       count,
       onClick,
+      props,
       onChangePropsDemo1,
       onChangePropsDemo2,
-      props,
+      onChangePropsDemo3,
     };
   },
   render() {
-    return h("div", { id: "root", ...this.props }, [
-      h("div", {}, "count: " + this.count.value),
-      h("button", { onClick: this.onClick }, "count++"),
-      h("button", { onClick: this.onChangePropsDemo1 }, "修改值"),
-      h("button", { onClick: this.onChangePropsDemo2 }, "bar属性被删除"),
-    ]);
+    return h(
+      "div",
+      {
+        id: "root",
+        ...this.props,
+      },
+      [
+        h("div", {}, `count: ${this.count}`), // 依赖收集
+        h(
+          "button",
+          {
+            onClick: this.onClick,
+          },
+          "click"
+        ),
+        h(
+          "button",
+          {
+            onClick: this.onChangePropsDemo1,
+          },
+          "changeProps - 值变了 - 修改"
+        ),
+        h(
+          "button",
+          {
+            onClick: this.onChangePropsDemo2,
+          },
+          "changeProps - 值变成了 undefined - 删除"
+        ),
+        h(
+          "button",
+          {
+            onClick: this.onChangePropsDemo3,
+          },
+          "changeProps - 删除了值中的一个属性 - 删除"
+        ),
+      ]
+    );
   },
 };
