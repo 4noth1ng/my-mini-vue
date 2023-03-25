@@ -11,6 +11,8 @@ export function createComponentInstance(vnode, parent) {
     setupState: {},
     props: {},
     slots: {},
+    isMounted: false,
+    subTree: {},
     provides: parent ? parent.provides : {},
     parent,
     emit: (e: any) => {},
@@ -53,7 +55,7 @@ function handleSetupResult(instance, setupResult) {
   // TODO function
 
   if (typeof setupResult === "object") {
-    instance.setupState = proxyRefs(setupResult);
+    instance.setupState = setupResult;
   }
 
   // 保证render有值

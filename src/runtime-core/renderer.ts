@@ -11,44 +11,56 @@ export function createRenderer(options) {
   function render(vnode, container, parentComponent) {
     // 调用`patch`方法，处理vnode, 方便后续递归处理
 
-    patch(vnode, container, parentComponent);
+    patch(null, vnode, container, parentComponent);
   }
 
-  function patch(vnode, container, parentComponent) {
+  function patch(n1, n2, container, parentComponent) {
     // 处理组件
     // 针对vnode 是 component | element类型进行处理
-    const { type, shapeFlag } = vnode;
+    const { type, shapeFlag } = n2;
 
     // Fragment -> 只渲染 children
     switch (type) {
       case Fragment:
-        processFragment(vnode, container, parentComponent);
+        processFragment(n1, n2, container, parentComponent);
         break;
       case Text:
-        processText(vnode, container);
+        processText(n1, n2, container);
         break;
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
-          processElement(vnode, container, parentComponent);
+          processElement(n1, n2, container, parentComponent);
         } else if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-          processComponent(vnode, container, parentComponent);
+          processComponent(n1, n2, container, parentComponent);
         }
         break;
     }
   }
 
-  function processFragment(vnode, container, parentComponent) {
+  function processFragment(n1, vnode, container, parentComponent) {
     mountChildren(vnode, container, parentComponent);
   }
 
-  function processText(vnode, container) {
+  function processText(n1, vnode, container) {
     const { children } = vnode;
     const textNode = (vnode.el = document.createTextNode(children));
     container.append(textNode);
   }
 
-  function processElement(vnode, container, parentComponent) {
-    mountElement(vnode, container, parentComponent);
+  function processElement(n1, n2, container, parentComponent) {
+    if (!n1) {
+      // init
+      mountElement(n2, container, parentComponent);
+    } else {
+      // diff
+      patchElement(n1, n2, container);
+    }
+  }
+
+  function patchElement(n1, n2, container) {
+    console.log("n1: ", n1);
+    console.log("n2: ", n2);
+    console.log();
   }
 
   function mountElement(vnode, container, parentComponent) {
@@ -74,11 +86,11 @@ export function createRenderer(options) {
 
   function mountChildren(vnode, container, parentComponent) {
     vnode.children.forEach((v) => {
-      patch(v, container, parentComponent);
+      patch(null, v, container, parentComponent);
     });
   }
 
-  function processComponent(initialVNode, container, parentComponent) {
+  function processComponent(n1, initialVNode, container, parentComponent) {
     // 挂载组件
     mountComponent(initialVNode, container, parentComponent);
   }
@@ -96,24 +108,40 @@ export function createRenderer(options) {
 
   function setupRenderEffect(instance, initialVNode, container) {
     /**
-     * 我们需要在虚拟节点更新时触发`render`，如何实现？将render作为依赖传入effect进行收集
+     * 我们需要在虚拟节点更新时触发`render`，如何实现？将render作为依赖传入effect进行收集, 当响应式对象改变时，依赖会被触发重新render
      */
+
     effect(() => {
-      // 虚拟节点树
-      // 将 component类型的vnode初始化为组件实例instance后，调用`render`，进行拆箱，得到该组件对应的虚拟节点
-      // 比如根组件得到的就为根虚拟节点
+      if (!instance.isMounted) {
+        // 第一次挂载时，渲染全部
 
-      const { proxy } = instance;
-      // 将render的this绑定到proxy上，render内获取this上属性时会被proxy拦截
-      const subTree = instance.render.call(proxy);
-      // vnode -> patch
-      // element类型 vnode -> element -> mountElement
+        // 虚拟节点树
+        // 将 component类型的vnode初始化为组件实例instance后，调用`render`，进行拆箱，得到该组件对应的虚拟节点
+        // 比如根组件得到的就为根虚拟节点
 
-      // 得到虚拟节点树，再次调用patch, 将vnode分为element类型(vnode.type为类似'div'的string)和component类型(vnode.type需初始化为instance)进行处理拆箱, 并挂载
-      patch(subTree, container, instance);
-      // element 全部挂载后， 获取的el一定是赋值后的
-      // 注意：`$el`获取的是组件实例的根dom节点，我们获取的subTree是调用render后生成的dom树，获取的自然是root， 然后我们将这个dom树挂载到 app上
-      initialVNode.el = subTree.el;
+        const { proxy } = instance;
+        // 将render的this绑定到proxy上，render内获取this上属性时会被proxy拦截
+        const subTree = (instance.subTree = instance.render.call(proxy));
+
+        // vnode -> patch
+        // element类型 vnode -> element -> mountElement
+
+        // 得到虚拟节点树，再次调用patch, 将vnode分为element类型(vnode.type为类似'div'的string)和component类型(vnode.type需初始化为instance)进行处理拆箱, 并挂载
+        patch(null, subTree, container, instance);
+        // element 全部挂载后， 获取的el一定是赋值后的
+        // 注意：`$el`获取的是组件实例的根dom节点，我们获取的subTree是调用render后生成的dom树，获取的自然是root， 然后我们将这个dom树挂载到 app上
+        initialVNode.el = subTree.el;
+
+        instance.isMounted = true;
+      } else {
+        // 进行diff判断，最小化更新
+        const { proxy } = instance;
+        const subTree = instance.render.call(proxy);
+        // 旧vnode树
+        const prevSubTree = instance.subTree;
+        patch(prevSubTree, subTree, container, instance);
+        instance.subTree = subTree;
+      }
     });
   }
 

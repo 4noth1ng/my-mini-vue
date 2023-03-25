@@ -58,7 +58,6 @@ export function track(target, key) {
 
   // if (!activeEffect) return; // 如果只是单纯获取响应式对象的属性，即没有调用`effect`，则无需收集依赖
   // if (!shouldTrack) return; // 如果无需收集依赖(即已经为stop状态)，直接return
-
   if (!isTracking()) return;
   let depsMap = targetMap.get(target);
   // depsMap: `key`为响应式对象的键`key`， `value`为这个`key`对应的依赖
