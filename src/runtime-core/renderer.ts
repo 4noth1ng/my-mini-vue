@@ -106,6 +106,102 @@ export function createRenderer(options) {
     container,
     parentComponent
   ) {
+    // 1. 处理相同前缀 定义索引j指向新旧两组子节点的开头
+    let j = 0;
+    let oldVNode = oldChildren[j];
+    let newVNode = newChildren[j];
+
+    while (oldVNode.key === newVNode.key) {
+      patch(oldVNode, newVNode, container, parentComponent);
+      j++;
+      oldVNode = oldChildren[j];
+      newVNode = newChildren[j];
+    }
+    // 2. 处理相同后缀，由于新旧两组子节点不同，所以定义两个指针
+    let oldEnd = oldChildren.length - 1;
+    let newEnd = newChildren.length - 1;
+
+    oldVNode = oldChildren[oldEnd];
+    newVNode = newChildren[newEnd];
+
+    while (oldVNode.key === newVNode.key) {
+      patch(oldVNode, newVNode, container, parentComponent);
+      oldVNode = oldChildren[--oldEnd];
+      newVNode = newChildren[--newEnd];
+    }
+
+    //3. 处理完前缀后缀，如果新节点数组仍有剩余，则需插入, 如何判断有剩余？ 易得：j > oldEnd说明旧节点处理完毕， j <= newEnd 说明新节点未处理完毕，则当二者符合时，满足条件
+    if (j > oldEnd && j <= newEnd) {
+      // 将[j, newEnd]内的所有节点插入到 newEnd的后一个节点之前
+      const anchorIdx = newEnd + 1;
+      const anchor =
+        anchorIdx < newChildren.length ? newChildren[anchorIdx].el : null;
+      while (j <= newEnd) {
+        patch(null, newChildren[j], container, parentComponent);
+        hostInsert(newChildren[j++].el, container, anchor);
+      }
+    }
+
+    // 4. 如果旧节点数组仍有剩余，则需卸载，同上，当 j > newEnd说明新节点处理完毕， 当 j <= oldEnd 说明旧节点未处理完毕
+    else if (j > newEnd && j <= oldEnd) {
+      // 卸载 [j, oldEnd] 之间的节点
+      while (j <= oldEnd) {
+        hostRemove(oldChildren[j++].el);
+      }
+    }
+
+    // 5. 新旧都有剩余
+    else {
+      // 构建source数组，用于存放新的一组子节点在旧的一组子节点的索引
+      const count = newEnd - j + 1; // 需要更新的新节点数量
+      const source = Array(count).fill(0);
+      source.fill(-1);
+
+      // oldStart 和 newStart 分别为起始索引，即j
+      const oldStart = j;
+      const newStart = j;
+
+      let moved = false; // 代表是否需要移动节点
+      let pos = 0; // 代表遍历旧节点时遇到的最大索引值，当pos呈现递增时，说明无需移动节点
+
+      // 构建索引表, key为新节点VNode的key，value为下标索引值, 用来寻找具有相同key的可复用节点
+      const keyIndex = {};
+      for (let i = newStart; i <= newEnd; i++) {
+        keyIndex[newChildren[i].key] = i;
+      }
+      // 代表更新过的节点数量
+      let patched = 0;
+      // 遍历旧的一组子节点中剩余未处理的节点
+      for (let i = oldStart; i <= oldEnd; i++) {
+        oldVNode = oldChildren[i];
+        if (patched <= count) {
+          const k = keyIndex[oldVNode.key];
+
+          if (typeof k !== "undefined") {
+            // 存在可复用节点
+            newVNode = newChildren[k];
+            patch(oldVNode, newVNode, container, parentComponent);
+            patched ++
+            source[k - newStart] = i;
+          } else {
+            // 该旧节点不存在于新节点数组中，则直接卸载
+            hostRemove(oldVNode.el);
+          }
+        } else {
+          // patched > count 即新节点已经更新完毕， 剩余旧节点需要进行卸载
+          hostRemove(oldVNode.el)
+        }
+      }
+    }
+  }
+
+  // 双端diff - vue2.js
+  function patchKeyedChildrenInVue2(
+    oldChildren,
+    newChildren,
+    container,
+    parentComponent
+  ) {
     // 新旧CHILDREN首尾指针
     let oldStartIdx = 0;
     let oldEndIdx = oldChildren.length - 1;
@@ -117,7 +213,6 @@ export function createRenderer(options) {
     let oldEndVNode = oldChildren[oldEndIdx];
     let newStartVNode = newChildren[newStartIdx];
     let newEndVNode = newChildren[newEndIdx];
-    debugger;
     // 新旧Children diff操作
     while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
       if (!oldStartVNode) {
