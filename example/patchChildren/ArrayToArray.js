@@ -191,41 +191,41 @@ import { ref, h } from "../../lib/my-mini-vue.esm.js";
 // a,b,(d,c,y,e),f,g
 
 // const prevChildren = [
-//   h("p", { key: "A" }, "A"),
-//   h("p", { key: "B" }, "B"),
-//   h("p", { key: "C" }, "C"),
-//   h("p", { key: "D" }, "D"),
-//   h("p", { key: "E" }, "E"),
-//   h("p", { key: "Z" }, "Z"),
-//   h("p", { key: "F" }, "F"),
-//   h("p", { key: "G" }, "G"),
+//   h("p", { key: "A", id: "old" }, "A"),
+//   h("p", { key: "B", id: "old" }, "B"),
+//   h("p", { key: "C", id: "old" }, "C"),
+//   h("p", { key: "D", id: "old" }, "D"),
+//   h("p", { key: "E", id: "old" }, "E"),
+//   h("p", { key: "Z", id: "old" }, "Z"),
+//   h("p", { key: "F", id: "old" }, "F"),
+//   h("p", { key: "G", id: "old" }, "G"),
 // ];
 
 // const nextChildren = [
-//   h("p", { key: "A" }, "A"),
-//   h("p", { key: "B" }, "B"),
-//   h("p", { key: "D" }, "D"),
-//   h("p", { key: "C" }, "C"),
-//   h("p", { key: "Y" }, "Y"),
-//   h("p", { key: "E" }, "E"),
-//   h("p", { key: "F" }, "F"),
-//   h("p", { key: "G" }, "G"),
+//   h("p", { key: "A", id: "new" }, "A"),
+//   h("p", { key: "B", id: "new" }, "B"),
+//   h("p", { key: "D", id: "new" }, "D"),
+//   h("p", { key: "C", id: "new" }, "C"),
+//   h("p", { key: "Y", id: "new" }, "Y"),
+//   h("p", { key: "E", id: "new" }, "E"),
+//   h("p", { key: "F", id: "new" }, "F"),
+//   h("p", { key: "G", id: "new" }, "G"),
 // ];
 
 // fix c 节点应该是 move 而不是删除之后重新创建的
-// const prevChildren = [
-//   h("p", { key: "A" }, "A"),
-//   h("p", {}, "C"),
-//   h("p", { key: "B" }, "B"),
-//   h("p", { key: "D" }, "D"),
-// ];
+const prevChildren = [
+  h("p", { key: "A" }, "A"),
+  h("p", {}, "C"),
+  h("p", { key: "B" }, "B"),
+  h("p", { key: "D" }, "D"),
+];
 
-// const nextChildren = [
-//   h("p", { key: "A" }, "A"),
-//   h("p", { key: "B" }, "B"),
-//   h("p", {}, "C"),
-//   h("p", { key: "D" }, "D"),
-// ];
+const nextChildren = [
+  h("p", { key: "A" }, "A"),
+  h("p", { key: "B" }, "B"),
+  h("p", {}, "C"),
+  h("p", { key: "D" }, "D"),
+];
 
 export default {
   name: "ArrayToArray",

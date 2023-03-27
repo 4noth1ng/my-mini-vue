@@ -110,7 +110,6 @@ export function createRenderer(options) {
     let j = 0;
     let oldVNode = oldChildren[j];
     let newVNode = newChildren[j];
-
     while (oldVNode.key === newVNode.key) {
       patch(oldVNode, newVNode, container, parentComponent);
       j++;
@@ -181,18 +180,95 @@ export function createRenderer(options) {
             // 存在可复用节点
             newVNode = newChildren[k];
             patch(oldVNode, newVNode, container, parentComponent);
-            patched ++
+            patched++;
             source[k - newStart] = i;
+            if (k < pos) {
+              // 当前索引比最大索引要小，即在oldChildren中当前newVNode靠前, 需要移动
+              moved = true;
+            } else {
+              pos = k;
+            }
           } else {
             // 该旧节点不存在于新节点数组中，则直接卸载
             hostRemove(oldVNode.el);
           }
         } else {
           // patched > count 即新节点已经更新完毕， 剩余旧节点需要进行卸载
-          hostRemove(oldVNode.el)
+          hostRemove(oldVNode.el);
+        }
+      }
+      if (moved) {
+        const seq = getSequence(source);
+        let s = seq.length; // s 指向递增子序列的最后一个元素
+        let i = count - 1; // i + newStart 指向需要更新的新节点序列最后一个元素
+        for (i; i >= 0; i--) {
+          if (source[i] === -1) {
+            // 旧节点数组中不存在该元素，直接进行挂载
+            const pos = i + newStart;
+            const newVNode = newChildren[pos];
+            const nextPos = pos + 1;
+            const anchor =
+              nextPos < newChildren.length ? newChildren[nextPos].el : null;
+            patch(null, newVNode, container, parentComponent);
+            hostInsert(newVNode.el, container, anchor);
+          } else if (i !== seq[s]) {
+            // 当前新节点不属于递增子序列的部分，所以该节点需要进行移动
+            const pos = i + newStart;
+            const newVNode = newChildren[pos];
+            const nextPos = pos + 1;
+            // 移动到他在newChildren的后一个节点之前
+            const anchor =
+              nextPos < newChildren.length ? newChildren[nextPos].el : null;
+
+            hostInsert(newVNode.el, container, anchor);
+          } else {
+            // 存在于递增子序列中，无需移动, s向前移动
+            s--;
+          }
         }
       }
     }
+  }
+  // TODO: 理解最长递增子序列(二分+贪心+前驱)算法
+  function getSequence(arr: number[]): number[] {
+    const p = arr.slice();
+    const result = [0];
+    let i, j, u, v, c;
+    const len = arr.length;
+    for (i = 0; i < len; i++) {
+      const arrI = arr[i];
+      if (arrI !== 0) {
+        j = result[result.length - 1];
+        if (arr[j] < arrI) {
+          p[i] = j;
+          result.push(i);
+          continue;
+        }
+        u = 0;
+        v = result.length - 1;
+        while (u < v) {
+          c = (u + v) >> 1;
+          if (arr[result[c]] < arrI) {
+            u = c + 1;
+          } else {
+            v = c;
+          }
+        }
+        if (arrI < arr[result[u]]) {
+          if (u > 0) {
+            p[i] = result[u - 1];
+          }
+          result[u] = i;
+        }
+      }
+    }
+    u = result.length;
+    v = result[u - 1];
+    while (u-- > 0) {
+      result[u] = v;
+      v = p[v];
+    }
+    return result;
   }
 
   // 双端diff - vue2.js
