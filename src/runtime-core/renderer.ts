@@ -4,6 +4,9 @@ import { Fragment, Text } from "./vnode";
 import { createAppAPI } from "./createApp";
 import { effect } from "../reactivity/effect";
 import { ShapeFlags } from "../shared/ShapeFlags";
+import { shouldUpdateComponent } from "./componentUpdateUtils";
+import { isEmptyObject } from "../shared/index";
+import { queueJobs } from "./scheduler";
 
 export function createRenderer(options) {
   const {
@@ -21,26 +24,28 @@ export function createRenderer(options) {
   }
 
   function patch(n1, n2, container, parentComponent) {
-    // 处理组件
-    // 针对vnode 是 component | element类型进行处理
-    const { type, shapeFlag } = n2;
+    try {
+      // 处理组件
+      // 针对vnode 是 component | element类型进行处理
+      const { type, shapeFlag } = n2;
 
-    // Fragment -> 只渲染 children
-    switch (type) {
-      case Fragment:
-        processFragment(n1, n2, container, parentComponent);
-        break;
-      case Text:
-        processText(n1, n2, container);
-        break;
-      default:
-        if (shapeFlag & ShapeFlags.ELEMENT) {
-          processElement(n1, n2, container, parentComponent);
-        } else if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
-          processComponent(n1, n2, container, parentComponent);
-        }
-        break;
-    }
+      // Fragment -> 只渲染 children
+      switch (type) {
+        case Fragment:
+          processFragment(n1, n2, container, parentComponent);
+          break;
+        case Text:
+          processText(n1, n2, container);
+          break;
+        default:
+          if (shapeFlag & ShapeFlags.ELEMENT) {
+            processElement(n1, n2, container, parentComponent);
+          } else if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+            processComponent(n1, n2, container, parentComponent);
+          }
+          break;
+      }
+    } catch (error) {}
   }
 
   function processFragment(n1, vnode, container, parentComponent) {
@@ -381,6 +386,7 @@ export function createRenderer(options) {
   }
 
   function patchProps(el, oldProps, newProps) {
+    if (isEmptyObject(oldProps) && isEmptyObject(newProps)) return;
     if (oldProps !== newProps) {
       for (const key in newProps) {
         const prevProp = oldProps[key];
@@ -426,13 +432,33 @@ export function createRenderer(options) {
   }
 
   function processComponent(n1, initialVNode, container, parentComponent) {
-    // 挂载组件
-    mountComponent(initialVNode, container, parentComponent);
+    if (!n1) {
+      // 挂载组件
+      mountComponent(initialVNode, container, parentComponent);
+    } else {
+      // 更新组件
+      updateComponent(n1, initialVNode);
+    }
+    // mountComponent(initialVNode, container, parentComponent);
   }
 
+  function updateComponent(n1, n2) {
+    debugger;
+    const instance = (n2.component = n1.component);
+    if (shouldUpdateComponent(n1, n2)) {
+      instance.next = n2;
+      instance.update();
+    } else {
+      n2.el = n1.el;
+      instance.vnode = n2;
+    }
+  }
   function mountComponent(initialVNode, container, parentComponent) {
     // 创建组件实例, 用于挂载`props`，`slots`等
-    const instance = createComponentInstance(initialVNode, parentComponent);
+    const instance = (initialVNode.component = createComponentInstance(
+      initialVNode,
+      parentComponent
+    ));
 
     // 处理组件, 挂载属性
     setupComponent(instance);
@@ -445,42 +471,65 @@ export function createRenderer(options) {
     /**
      * 我们需要在虚拟节点更新时触发`render`，如何实现？将render作为依赖传入effect进行收集, 当响应式对象改变时，依赖会被触发重新render
      */
+    // 存储runner
+    instance.update = effect(
+      () => {
+        if (!instance.isMounted) {
+          // 第一次挂载时，渲染全部
 
-    effect(() => {
-      if (!instance.isMounted) {
-        // 第一次挂载时，渲染全部
+          // 虚拟节点树
+          // 将 component类型的vnode初始化为组件实例instance后，调用`render`，进行拆箱，得到该组件对应的虚拟节点
+          // 比如根组件得到的就为根虚拟节点
 
-        // 虚拟节点树
-        // 将 component类型的vnode初始化为组件实例instance后，调用`render`，进行拆箱，得到该组件对应的虚拟节点
-        // 比如根组件得到的就为根虚拟节点
+          const { proxy } = instance;
+          // 将render的this绑定到proxy上，render内获取this上属性时会被proxy拦截
+          const subTree = (instance.subTree = instance.render.call(proxy));
 
-        const { proxy } = instance;
-        // 将render的this绑定到proxy上，render内获取this上属性时会被proxy拦截
-        const subTree = (instance.subTree = instance.render.call(proxy));
+          // vnode -> patch
+          // element类型 vnode -> element -> mountElement
 
-        // vnode -> patch
-        // element类型 vnode -> element -> mountElement
+          // 得到虚拟节点树，再次调用patch, 将vnode分为element类型(vnode.type为类似'div'的string)和component类型(vnode.type需初始化为instance)进行处理拆箱, 并挂载
+          patch(null, subTree, container, instance);
+          // element 全部挂载后， 获取的el一定是赋值后的
+          // 注意：`$el`获取的是组件实例的根dom节点，我们获取的subTree是调用render后生成的dom树，获取的自然是root， 然后我们将这个dom树挂载到 app上
+          initialVNode.el = subTree.el;
 
-        // 得到虚拟节点树，再次调用patch, 将vnode分为element类型(vnode.type为类似'div'的string)和component类型(vnode.type需初始化为instance)进行处理拆箱, 并挂载
-        patch(null, subTree, container, instance);
-        // element 全部挂载后， 获取的el一定是赋值后的
-        // 注意：`$el`获取的是组件实例的根dom节点，我们获取的subTree是调用render后生成的dom树，获取的自然是root， 然后我们将这个dom树挂载到 app上
-        initialVNode.el = subTree.el;
+          instance.isMounted = true;
+        } else {
+          const { next, vnode } = instance;
+          if (next) {
+            next.el = vnode.el;
+            updateComponentPreRender(instance, next);
+          }
 
-        instance.isMounted = true;
-      } else {
-        // 进行diff判断，最小化更新
-        const { proxy } = instance;
-        const subTree = instance.render.call(proxy);
-        // 旧vnode树
-        const prevSubTree = instance.subTree;
-        patch(prevSubTree, subTree, container, instance);
-        instance.subTree = subTree;
+          // 进行diff判断，最小化更新
+          const { proxy } = instance;
+          const subTree = instance.render.call(proxy);
+          // 旧vnode树
+          const prevSubTree = instance.subTree;
+          patch(prevSubTree, subTree, container, instance); // 更新children
+
+          // 还需要更新props
+
+          instance.subTree = subTree;
+        }
+      },
+      {
+        scheduler() {
+          queueJobs(instance.update);
+        },
       }
-    });
+    );
   }
 
   return {
     createApp: createAppAPI(render),
   };
+}
+
+function updateComponentPreRender(instance, nextVNode) {
+  instance.vnode = nextVNode;
+  instance.next = null;
+
+  instance.props = nextVNode.props;
 }
