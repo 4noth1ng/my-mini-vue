@@ -20,8 +20,28 @@ function parseChildren(context) {
       node = parseElement(context);
     }
   }
+
+  if (!node) {
+    node = parseText(context);
+  }
+
   nodes.push(node);
   return nodes;
+}
+
+function parseText(context) {
+  const content = parseTextData(context);
+
+  advanceBy(context, content.length);
+
+  return {
+    type: NodeTypes.TEXT,
+    content,
+  };
+}
+
+function parseTextData(context) {
+  return context.source.slice(0, context.source.length);
 }
 
 function parseElement(context) {
