@@ -99,6 +99,15 @@
     /* Completeness */
     // "skipDefaultLibCheck": true,                      /* Skip type checking .d.ts files that are included with TypeScript. */
     "skipLibCheck": true,                                 /* Skip type checking all .d.ts files. */
-    "types": ["jest"]
-  }
+    "types": ["jest"],
+    "paths": {
+      "@my-mini-vue/*": [
+        "./packages/*/src"
+      ]
+    }
+  },
+  "include": [
+    "packages/*/src",
+    "packages/*/__tests__"
+  ]
 }
