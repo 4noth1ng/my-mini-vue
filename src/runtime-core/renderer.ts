@@ -483,7 +483,11 @@ export function createRenderer(options) {
 
           const { proxy } = instance;
           // 将render的this绑定到proxy上，render内获取this上属性时会被proxy拦截
-          const subTree = (instance.subTree = instance.render.call(proxy));
+          // 由于render函数编译后直接获取第一个参数_ctx上的属性，所以将proxy传入
+          const subTree = (instance.subTree = instance.render.call(
+            proxy,
+            proxy
+          ));
 
           // vnode -> patch
           // element类型 vnode -> element -> mountElement
@@ -504,7 +508,7 @@ export function createRenderer(options) {
 
           // 进行diff判断，最小化更新
           const { proxy } = instance;
-          const subTree = instance.render.call(proxy);
+          const subTree = instance.render.call(proxy, proxy);
           // 旧vnode树
           const prevSubTree = instance.subTree;
           patch(prevSubTree, subTree, container, instance); // 更新children

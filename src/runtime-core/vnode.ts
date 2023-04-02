@@ -1,5 +1,5 @@
 import { ShapeFlags } from "../shared/ShapeFlags";
-
+export { createVNode as createElementVNode };
 export const Fragment = Symbol("Fragment");
 export const Text = Symbol("Text");
 
